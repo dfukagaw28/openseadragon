@@ -240,7 +240,9 @@ $.extend( $.ReferenceStrip.prototype, $.EventSource.prototype, $.Viewer.prototyp
             viewerSize   = $.getElementSize( this.viewer.canvas ),
             scrollWidth  = Number( this.element.style.width.replace( 'px', '' ) ),
             scrollHeight = Number( this.element.style.height.replace( 'px', '' ) ),
-            offsetLeft   = -Number( this.element.style.marginLeft.replace( 'px', '' ) ),
+            //＠＠masaka変更、↓多数あり。///に注目
+            ///offsetLeft   = -Number( this.element.style.marginLeft.replace( 'px', '' ) ),
+            offsetLeft   = this.element.parentNode.scrollLeft,
             offsetTop    = -Number( this.element.style.marginTop.replace( 'px', '' ) ),
             offset;
 
@@ -249,20 +251,28 @@ $.extend( $.ReferenceStrip.prototype, $.EventSource.prototype, $.Viewer.prototyp
                 this.currentSelected.style.background = '#000';
             }
             this.currentSelected = element;
-            this.currentSelected.style.background = '#999';
+            ///this.currentSelected.style.background = '#999';
+            this.currentSelected.style.background = this.selectedBg||"#999";
 
             if ( 'horizontal' == this.scroll ) {
                 //right left
                 offset = ( Number( page ) ) * ( this.panelWidth + 3 );
                 if ( offset > offsetLeft + viewerSize.x - this.panelWidth ) {
-                    offset = Math.min( offset, ( scrollWidth - viewerSize.x ) );
-                    this.element.style.marginLeft = -offset + 'px';
+                    ///offset = Math.min( offset, ( scrollWidth - viewerSize.x ) );
+                    //marginではなくスクロール位置なので、カンバス幅の半分を引いておく
+                    offset = Math.min( offset - viewerSize.x / 2, ( scrollWidth - viewerSize.x ) );
+                    ///this.element.style.marginLeft = -offset + 'px';
+                    this.element.parentNode.scrollLeft = offset;
                     loadPanels( this, viewerSize.x, -offset );
                 } else if ( offset < offsetLeft ) {
                     offset = Math.max( 0, offset - viewerSize.x / 2 );
-                    this.element.style.marginLeft = -offset + 'px';
+                    ///this.element.style.marginLeft = -offset + 'px';
+                    this.element.parentNode.scrollLeft = offset;
                     loadPanels( this, viewerSize.x, -offset );
                 }
+                ///追加＝スクロールバーで移動してからクリックすると、上の条件に当てはまらないのでthumbがロードされない
+                else loadPanels( this, viewerSize.x, -offset );
+                //＠＠masaka変更ここまで↑の///コメント箇所
             } else {
                 offset = ( Number( page ) ) * ( this.panelHeight + 3 );
                 if ( offset > offsetTop + viewerSize.y - this.panelHeight ) {
@@ -303,6 +313,14 @@ $.extend( $.ReferenceStrip.prototype, $.EventSource.prototype, $.Viewer.prototyp
         if (this.element) {
             this.element.parentNode.removeChild(this.element);
         }
+    }
+    //＠＠masaka _loadPanels関数追加。 次の行の,も忘れずに
+    ,
+    //.refstrpのscrollLeftを与えてロードしていないパネルをロードさせるための拡張。
+
+    _loadPanels: function(refstrpLeft){
+        var viewerSize   = $.getElementSize( this.viewer.canvas )
+        loadPanels( this, viewerSize.x, refstrpLeft );
     }
 
 } );
@@ -366,7 +384,9 @@ function onStripDrag( event ) {
  * @function
  */
 function onStripScroll( event ) {
-    var offsetLeft   = Number( this.element.style.marginLeft.replace( 'px', '' ) ),
+    //＠＠masaka変更↓ ///箇所
+    ///var offsetLeft   = Number( this.element.style.marginLeft.replace( 'px', '' ) ),
+    var offsetLeft   = -this.element.parentNode.scrollLeft,
         offsetTop    = Number( this.element.style.marginTop.replace( 'px', '' ) ),
         scrollWidth  = Number( this.element.style.width.replace( 'px', '' ) ),
         scrollHeight = Number( this.element.style.height.replace( 'px', '' ) ),
@@ -376,16 +396,19 @@ function onStripScroll( event ) {
             if ( event.scroll > 0 ) {
                 //forward
                 if ( offsetLeft > -( scrollWidth - viewerSize.x ) ) {
-                    this.element.style.marginLeft = ( offsetLeft - ( event.scroll * 60 ) ) + 'px';
+                    ///this.element.style.marginLeft = ( offsetLeft - ( event.scroll * 60 ) ) + 'px';
+                    this.element.parentNode.scrollLeft = event.scroll * 60 - offsetLeft;
                     loadPanels( this, viewerSize.x, offsetLeft - ( event.scroll * 60 ) );
                 }
             } else if ( event.scroll < 0 ) {
                 //reverse
                 if ( offsetLeft < 0 ) {
-                    this.element.style.marginLeft = ( offsetLeft - ( event.scroll * 60 ) ) + 'px';
+                    ///this.element.style.marginLeft = ( offsetLeft - ( event.scroll * 60 ) ) + 'px';
+                    this.element.parentNode.scrollLeft = event.scroll * 60 - offsetLeft;
                     loadPanels( this, viewerSize.x, offsetLeft - ( event.scroll * 60 ) );
                 }
             }
+            //＠＠masaka変更ここまで↑の///コメント箇所
         } else {
             if ( event.scroll < 0 ) {
                 //scroll up
@@ -416,7 +439,10 @@ function loadPanels( strip, viewerSize, scroll ) {
         i,
         element;
     if ( 'horizontal' == strip.scroll ) {
-        panelSize = strip.panelWidth;
+        //＠＠masaka変更1行
+        ///panelSize = strip.panelWidth;
+        //setFocus()でoffset = ( Number( page ) ) * ( this.panelWidth + 3 )として計算しているので、ここでも+3しないとパネル数が正しく算出されない（多くなってしまう）
+        panelSize = strip.panelWidth + 3;
     } else {
         panelSize = strip.panelHeight;
     }
@@ -451,6 +477,20 @@ function loadPanels( strip, viewerSize, scroll ) {
                 blendTime:              0,
                 animationTime:          0
             } );
+            //＠＠masaka追加if{} 2017-09-18
+            if(originalTileSource.mkpagelayer){
+                //Miiif.cnvsview.pairedpageで追加したtileのlayer情報を使ってRefStripにも対向ページを表示
+                miniViewer.addTiledImage(originalTileSource.mkpagelayer);
+                miniViewer.addHandler("tile-loaded", function(e){
+                    //addTiledImageした時点ではまだロードされていないのでpanToができない
+                    if(!miniViewer.mkset) e.tiledImage.addHandler("fully-loaded-change", function(e){
+                        //panToの中心もpairedpageで計算しておく
+                        //e.eventSource.viewport.panTo(originalTileSource.mkcenter || {x:1, y:0.71});
+                        //fitHorizontallyのほうがきれいになるが、両端ページとバランスが悪い
+                        e.eventSource.viewport.fitHorizontally();
+                    });
+                });
+            }
 
             miniViewer.displayRegion           = $.makeNeutralElement( "div" );
             miniViewer.displayRegion.id        = element.id + '-displayregion';
@@ -524,6 +564,8 @@ function onStripEnter( event ) {
 function onStripExit( event ) {
     var element = event.eventSource.element;
 
+    //＠＠masaka変更。半分隠れないようにするため以下コメントアウト
+    /*
     if ( 'horizontal' == this.scroll ) {
 
         //element.style.paddingTop = "10px";
@@ -535,6 +577,7 @@ function onStripExit( event ) {
         element.style.marginLeft = "-" + ( $.getElementSize( element ).x / 2 ) + "px";
 
     }
+    */
     return false;
 }
 

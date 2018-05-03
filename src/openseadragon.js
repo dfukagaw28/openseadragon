@@ -711,6 +711,7 @@ function OpenSeadragon( options ){
      */
     $.version = {
         versionStr: '<%= osdVersion.versionStr %>',
+        branch: 'mk',
         major: parseInt('<%= osdVersion.major %>', 10),
         minor: parseInt('<%= osdVersion.minor %>', 10),
         revision: parseInt('<%= osdVersion.revision %>', 10)
