@@ -2192,7 +2192,8 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
                     viewer:      this
                 });
 
-                this.referenceStrip.setFocus( this._sequenceIndex );
+                //＠＠masaka変更＝1行コメントアウト。ここでsetFocusするとimgannot.jsのMuib.refstrip.setupが間に合わず、スクロールをscrollLeftに頼るようにした変更が効かずにinitialPageにスクロールできなくなる。XTMemo参照
+                ///this.referenceStrip.setFocus( this._sequenceIndex );
             }
         } else {
             $.console.warn('Attempting to display a reference strip while "sequenceMode" is off.');

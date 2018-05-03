@@ -190,6 +190,8 @@ $.Navigator = function( options ){
         }
         navigatorSize = $.getElementSize( this.element );
         this.elementArea = navigatorSize.x * navigatorSize.y;
+        //＠＠masaka変更1行追加↓。navigatorHeight、navigatorWidthを設定してもupdateでviewerの比率に戻されてしまうため
+        this._resizeWithViewer = false;
     }
 
     this.oldContainerSize = new $.Point( 0, 0 );
@@ -294,6 +296,7 @@ $.extend( $.Navigator.prototype, $.EventSource.prototype, $.Viewer.prototype, /*
                 newWidth  = viewerSize.x * this.sizeRatio;
                 newHeight = viewerSize.y * this.sizeRatio;
             } else {
+                //＠＠masaka この計算は明らかにおかしいが、直すのは厄介なので↑で_resizeWithViewerをfalseに（ここでは変更なし）
                 newWidth = Math.sqrt(this.elementArea * (viewerSize.x / viewerSize.y));
                 newHeight = this.elementArea / newWidth;
             }

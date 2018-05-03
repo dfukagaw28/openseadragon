@@ -646,7 +646,9 @@ function processResponse( xhr ){
         throw new Error( $.getString( "Errors.Status", status, statusText ) );
     }
 
-    if( responseText.match(/\s*<.*/) ){
+    //＠＠masaka変更正規表現 2017-10-27 it mis-detects XML if JSON value contains "<"
+    //if( responseText.match(/\s*<.*/) )
+    if( responseText.match(/^\s*<.*/) ){
         try{
         data = ( xhr.responseXML && xhr.responseXML.documentElement ) ?
             xhr.responseXML :
