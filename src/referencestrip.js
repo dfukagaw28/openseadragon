@@ -175,7 +175,9 @@ $.ReferenceStrip = function ( options ) {
         }
     }
 
-    this.panelWidth = ( viewerSize.x * this.sizeRatio ) + 8;
+    //＠＠masaka OSDの幅に関係なくrefstripを一定にする 2018-03-21
+    //this.panelWidth = ( viewerSize.x * this.sizeRatio ) + 8;
+    this.panelWidth = options.mkPanelWidth || ( viewerSize.x * this.sizeRatio ) + 8;
     this.panelHeight = ( viewerSize.y * this.sizeRatio ) + 8;
     this.panels = [];
     this.miniViewers = {};

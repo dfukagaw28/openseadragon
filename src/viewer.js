@@ -2216,6 +2216,8 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
                     scroll:      this.referenceStripScroll,
                     height:      this.referenceStripHeight,
                     width:       this.referenceStripWidth,
+                    //＠＠masaka追加 referenceStripWidthはパネルをまとめるストリップ全体幅なのでパネル幅オプション追加
+                    mkPanelWidth: this.mkReferenceStripPanelWidth,
                     tileSources: this.tileSources,
                     prefixUrl:   this.prefixUrl,
                     viewer:      this
