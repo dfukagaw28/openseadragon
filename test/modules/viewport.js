@@ -1,4 +1,4 @@
-/* global module, asyncTest, $, ok, equal, notEqual, start, test, Util, testLog, propEqual, console */
+/* global QUnit, $, Util, testLog, console */
 
 (function () {
     var viewer;
@@ -7,9 +7,9 @@
     var SPRING_STIFFNESS = 100; // Faster animation = faster tests
     var EPSILON = 0.0000000001;
 
-     module("viewport", {
-        setup: function () {
-            var example = $('<div id="example"></div>').appendTo("#qunit-fixture");
+     QUnit.module("viewport", {
+        beforeEach: function () {
+            $('<div id="example"></div>').appendTo("#qunit-fixture");
 
             testLog.reset();
 
@@ -19,7 +19,7 @@
                 springStiffness: SPRING_STIFFNESS
             });
         },
-        teardown: function () {
+        afterEach: function () {
             if (viewer && viewer.close) {
                 viewer.close();
             }
@@ -56,14 +56,15 @@
 
     // Test helper - a lot of these tests loop through a few possible
     // values for zoom levels, and reopen the viewer for each iteration.
-    var reopenViewerHelper = function(config) {
+    var reopenViewerHelper = function(assert, config) {
+        var done = assert.async();
         var expected, level, actual, i = 0;
         var openHandler = function(event) {
             var viewport = viewer.viewport;
             expected = config.processExpected(level, expected);
             actual = viewport[config.method]();
 
-            propEqual(
+            assert.propEqual(
                 actual,
                 expected,
                 "Test " + config.method + " with zoom level of " + level + ". Expected : " + expected + ", got " + actual
@@ -82,7 +83,7 @@
                 viewer.addOnceHandler('open', openHandler);
                 viewer.open(DZI_PATH);
             } else {
-                start();
+                done();
             }
         };
         level = expected = testZoomLevels[i];
@@ -100,7 +101,8 @@
 
     // Test helper - a lot of these tests loop through a test data
     // array and test different values. This helper does not reopen the viewer.
-    var loopingTestHelper = function(config) {
+    var loopingTestHelper = function(assert, config) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -111,78 +113,92 @@
                 orig = config.getOrig(config.testArray[i], viewport);
                 expected = config.getExpected(orig, viewport);
                 actual = viewport[config.method](orig);
-                var assert = config.assert || propEqual;
-                assert(
-                    actual,
-                    expected,
-                    "Correctly converted coordinates " + orig
-                );
+                if(config.assert) {
+                    config.assert(
+                        assert,
+                        actual,
+                        expected,
+                        1e-15,
+                        "Correctly converted coordinates " + orig
+                    );
+                } else {
+                    assert.propEqual(
+                        actual,
+                        expected,
+                        "Correctly converted coordinates " + orig
+                    );
+                }
+
             }
 
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     };
 
-    function assertPointsEquals(actual, expected, message) {
-        Util.assertPointsEquals(actual, expected, 1e-15, message);
+    function assertPointsEquals(assert, actual, expected, variance, message) {
+        Util.assertPointsEquals(assert, actual, expected, variance, message);
     }
 
 // Tests start here.
 
-    asyncTest('getContainerSize', function() {
+    QUnit.test('getContainerSize', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
             viewport.zoomTo(ZOOM_FACTOR, null, true);
 
-            propEqual(viewport.getContainerSize(), new OpenSeadragon.Point(500, 500), "Test container size");
-            start();
+            assert.propEqual(viewport.getContainerSize(), new OpenSeadragon.Point(500, 500), "Test container size");
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('getAspectRatio', function() {
+    QUnit.test('getAspectRatio', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
             viewport.zoomTo(ZOOM_FACTOR, null, true);
 
-            equal(viewport.getAspectRatio(), 1, "Test aspect ratio");
-            start();
+            assert.equal(viewport.getAspectRatio(), 1, "Test aspect ratio");
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('getMinZoomDefault', function() {
+    QUnit.test('getMinZoomDefault', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
 
-            equal(viewport.getMinZoom(), 0.9, "Test default min zoom level");
-            start();
+            assert.equal(viewport.getMinZoom(), 0.9, "Test default min zoom level");
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('getMaxZoomDefault', function() {
+    QUnit.test('getMaxZoomDefault', function(assert) {
+    var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
 
-            equal(viewport.getMaxZoom(), 2.2, "Test default max zoom level");
-            start();
+            assert.equal(viewport.getMaxZoom(), 2.2, "Test default max zoom level");
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('getMinZoom', function() {
-        reopenViewerHelper({
+    QUnit.test('getMinZoom', function(assert) {
+        reopenViewerHelper(assert, {
             property: 'minZoomLevel',
             method: 'getMinZoom',
             processExpected: function(level, expected){
@@ -196,8 +212,8 @@
         });
     });
 
-    asyncTest('getMaxZoom', function() {
-        reopenViewerHelper({
+    QUnit.test('getMaxZoom', function(assert) {
+        reopenViewerHelper(assert, {
             property: 'maxZoomLevel',
             method: 'getMaxZoom',
             processExpected: function(level, expected) {
@@ -212,8 +228,8 @@
         });
     });
 
-    asyncTest('getHomeBounds', function() {
-        reopenViewerHelper({
+    QUnit.test('getHomeBounds', function(assert) {
+        reopenViewerHelper(assert, {
             property: 'defaultZoomLevel',
             method: 'getHomeBounds',
             processExpected: function(level, expected) {
@@ -224,12 +240,14 @@
         });
     });
 
-    asyncTest('getHomeBoundsNoRotate with rotation', function() {
+    QUnit.test('getHomeBoundsNoRotate with rotation', function(assert) {
+        var done = assert.async();
         function openHandler() {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
             viewport.setRotation(-675);
             Util.assertRectangleEquals(
+                assert,
                 viewport.getHomeBoundsNoRotate(),
                 new OpenSeadragon.Rect(
                     (1 - Math.sqrt(2)) / 2,
@@ -238,18 +256,20 @@
                     Math.sqrt(2)),
                 0.00000001,
                 "Test getHomeBoundsNoRotate with degrees = -675");
-            start();
+            done();
         }
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('getHomeBounds with rotation', function() {
+    QUnit.test('getHomeBounds with rotation', function(assert) {
+        var done = assert.async();
         function openHandler() {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
             viewport.setRotation(-675);
             Util.assertRectangleEquals(
+                assert,
                 viewport.getHomeBounds(),
                 new OpenSeadragon.Rect(
                     0.5,
@@ -259,22 +279,24 @@
                     45),
                 0.00000001,
                 "Test getHomeBounds with degrees = -675");
-            start();
+            done();
         }
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('getHomeBoundsWithMultiImages', function() {
+    QUnit.test('getHomeBoundsWithMultiImages', function(assert) {
+        var done = assert.async();
         function openHandler() {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
             Util.assertRectangleEquals(
+                assert,
                 new OpenSeadragon.Rect(0, 0, 4, 4),
                 viewport.getHomeBounds(),
                 0.00000001,
                 "Test getHomeBoundsWithMultiImages");
-            start();
+            done();
         }
         viewer.addHandler('open', openHandler);
         viewer.open([{
@@ -290,16 +312,18 @@
         }]);
     });
 
-    asyncTest('getHomeBoundsWithMultiImagesAndClipping', function() {
+    QUnit.test('getHomeBoundsWithMultiImagesAndClipping', function(assert) {
+        var done = assert.async();
         function openHandler() {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
             Util.assertRectangleEquals(
+                assert,
                 new OpenSeadragon.Rect(1, 1, 4, 4),
                 viewport.getHomeBounds(),
                 0.00000001,
                 "Test getHomeBoundsWithMultiImagesAndClipping");
-            start();
+            done();
         }
         viewer.addHandler('open', openHandler);
         viewer.open([{
@@ -316,8 +340,8 @@
         }]);
     });
 
-    asyncTest('getHomeZoom', function() {
-        reopenViewerHelper({
+    QUnit.test('getHomeZoom', function(assert) {
+        reopenViewerHelper(assert, {
             property: 'defaultZoomLevel',
             method: 'getHomeZoom',
             processExpected: function(level, expected){
@@ -332,13 +356,14 @@
 
     // I don't use the helper for this one because it sets a couple more
     // properties that would need special casing.
-    asyncTest('getHomeZoomWithHomeFillsViewer', function() {
+    QUnit.test('getHomeZoomWithHomeFillsViewer', function(assert) {
+        var done = assert.async();
         var i = 0;
         var openHandler = function(event) {
             var viewport = viewer.viewport;
             viewport.zoomTo(ZOOM_FACTOR, null, true);
 
-            equal(
+            assert.equal(
                 viewport.getHomeZoom(),
                 testZoomLevels[i],
                 "Test getHomeZoom with homeFillsViewer = true and default zoom level of " + testZoomLevels[i]
@@ -355,7 +380,7 @@
                 viewer.addOnceHandler('open', openHandler);
                 viewer.open(TALL_PATH);  // use a different image for homeFillsViewer
             } else {
-                start();
+                done();
             }
         };
         viewer = OpenSeadragon({
@@ -369,7 +394,8 @@
         viewer.open(TALL_PATH); // use a different image for homeFillsViewer
     });
 
-    asyncTest('resetContentSize', function(){
+    QUnit.test('resetContentSize', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -377,19 +403,20 @@
             for(var i = 0; i < testRects.length; i++){
                 var rect = testRects[i].times(viewport.getContainerSize());
                 viewport.resetContentSize(rect.getSize());
-                propEqual(
+                assert.propEqual(
                     viewport._contentSize,
                     rect.getSize(),
                     "Reset content size correctly."
                 );
             }
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('goHome', function(){
+    QUnit.test('goHome', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -398,18 +425,19 @@
             viewport.zoomTo(ZOOM_FACTOR, true);
 
             viewport.goHome(true);
-            propEqual(
+            assert.propEqual(
                 viewport.getBounds(),
                 viewport.getHomeBounds(),
                  "Went home."
             );
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('ensureVisible', function() {
+    QUnit.test('ensureVisible', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -420,14 +448,15 @@
 
             viewport.ensureVisible(true);
             var bounds = viewport.getBounds();
-            ok(bounds.getSize().x > 1 && bounds.getSize().y > 1, "Moved viewport so that image is visible.");
-            start();
+            assert.ok(bounds.getSize().x > 1 && bounds.getSize().y > 1, "Moved viewport so that image is visible.");
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('applyConstraints', function() {
+    QUnit.test('applyConstraints', function(assert) {
+        var done = assert.async();
         var openHandler = function() {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -437,17 +466,45 @@
             viewport.applyConstraints(true);
             var bounds = viewport.getBounds();
             Util.assertRectangleEquals(
+                assert,
                 new OpenSeadragon.Rect(0.7, 0.7, 1, 1),
                 bounds,
                 EPSILON,
                 "Viewport.applyConstraints should move viewport.");
-            start();
+
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('applyConstraints with visibilityRatio = 1 shouldn\'t bounce around', function() {
+    QUnit.test('applyConstraints flipped', function(assert) {
+        var done = assert.async();
+        var openHandler = function() {
+            viewer.removeHandler('open', openHandler);
+            var viewport = viewer.viewport;
+
+            viewport.setFlip(true);
+
+            viewport.fitBounds(new OpenSeadragon.Rect(1, 1, 1, 1), true);
+            viewport.visibilityRatio = 0.3;
+            viewport.applyConstraints(true);
+            var bounds = viewport.getBounds();
+            Util.assertRectangleEquals(
+                assert,
+                new OpenSeadragon.Rect(0.7, 0.7, 1, 1),
+                bounds,
+                EPSILON,
+                "Viewport.applyConstraints should move flipped viewport.");
+
+            done();
+        };
+        viewer.addHandler('open', openHandler);
+        viewer.open(DZI_PATH);
+    });
+
+    QUnit.test('applyConstraints with visibilityRatio = 1 shouldn\'t bounce around', function(assert) {
+        var done = assert.async();
         var openHandler = function() {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -458,17 +515,19 @@
             viewport.applyConstraints(true);
             var bounds = viewport.getBounds();
             Util.assertRectangleEquals(
+                assert,
                 new OpenSeadragon.Rect(-0.5, 1, 2, 2),
                 bounds,
                 EPSILON,
                 "Viewport.applyConstraints should move viewport to the center, not to a side.");
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(TALL_PATH);
     });
 
-    asyncTest('applyConstraints with rotation', function() {
+    QUnit.test('applyConstraints with rotation', function(assert) {
+        var done = assert.async();
         var openHandler = function() {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -477,11 +536,38 @@
             viewport.applyConstraints(true);
             var bounds = viewport.getBounds();
             Util.assertRectangleEquals(
+                assert,
                 bounds,
                 new OpenSeadragon.Rect(1, 0, Math.sqrt(2), Math.sqrt(2), 45),
                 EPSILON,
                 "Viewport.applyConstraints with rotation should move viewport.");
-            start();
+
+            done();
+        };
+        viewer.addHandler('open', openHandler);
+        viewer.open(DZI_PATH);
+    });
+
+    QUnit.test('applyConstraints flipped with rotation', function(assert) {
+        var done = assert.async();
+        var openHandler = function() {
+            viewer.removeHandler('open', openHandler);
+            var viewport = viewer.viewport;
+
+            viewport.setFlip(true);
+            viewport.setRotation(45);
+
+            viewport.fitBounds(new OpenSeadragon.Rect(1, 1, 1, 1), true);
+            viewport.applyConstraints(true);
+            var bounds = viewport.getBounds();
+            Util.assertRectangleEquals(
+                assert,
+                bounds,
+                new OpenSeadragon.Rect(1, 0, Math.sqrt(2), Math.sqrt(2), 45),
+                EPSILON,
+                "Viewport.applyConstraints flipped and with rotation should move viewport.");
+
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
@@ -545,7 +631,8 @@
         new OpenSeadragon.Rect(0.25, 0.25, 0.5, 0.5)
     ];
 
-    asyncTest('fitBounds', function(){
+    QUnit.test('fitBounds', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -553,19 +640,20 @@
             for(var i = 0; i < testRectsFitBounds.length; i++){
                 var rect = testRectsFitBounds[i];
                 viewport.fitBounds(rect, true);
-                propEqual(
+                assert.propEqual(
                     viewport.getBounds(),
                     expectedRectsFitBounds[i],
                     "Fit bounds correctly."
                 );
             }
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('fitBounds with viewport rotation', function(){
+    QUnit.test('fitBounds with viewport rotation', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -575,19 +663,21 @@
                 var rect = testRectsFitBounds[i];
                 viewport.fitBounds(rect, true);
                 Util.assertRectangleEquals(
+                    assert,
                     viewport.getBounds(),
                     expectedRectsFitBoundsWithRotation[i],
                     EPSILON,
                     "Fit bounds correctly."
                 );
             }
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('fitBoundsWithConstraints', function(){
+    QUnit.test('fitBoundsWithConstraints', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -596,90 +686,95 @@
                 var rect = testRectsFitBounds[i];
 
                 viewport.fitBoundsWithConstraints(rect, true);
-                propEqual(
+                assert.propEqual(
                     viewport.getBounds(),
                     expectedRectsFitBoundsWithConstraints[i],
                     "Fit bounds correctly."
                 );
             }
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('fitBounds with almost same zoom', function() {
+    QUnit.test('fitBounds with almost same zoom', function(assert) {
+        var done = assert.async();
         var openHandler = function() {
             var viewport = viewer.viewport;
             var rect1 = new OpenSeadragon.Rect(0, 0, 1, 1);
             viewport.fitBounds(rect1, true);
-            Util.assertRectangleEquals(rect1, viewport.getBounds(), 1e-6,
+            Util.assertRectangleEquals(assert, rect1, viewport.getBounds(), 1e-6,
                 'Bounds should be ' + rect1);
 
             // Zoom and pan
             var rect2 = new OpenSeadragon.Rect(1, 1, 1 + 1e-8, 1 + 1e-8);
             viewport.fitBounds(rect2);
-            Util.assertRectangleEquals(rect2, viewport.getBounds(), 1e-6,
+            Util.assertRectangleEquals(assert, rect2, viewport.getBounds(), 1e-6,
                 'Bounds should be ' + rect2);
-            start();
+            done();
         };
         viewer.addOnceHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('fitBounds with big rectangle', function() {
+    QUnit.test('fitBounds with big rectangle', function(assert) {
+        var done = assert.async();
         var openHandler = function() {
             var viewport = viewer.viewport;
             var rect1 = new OpenSeadragon.Rect(0, 0, 1e9, 1e9);
             viewport.fitBounds(rect1, true);
-            Util.assertRectangleEquals(rect1, viewport.getBounds(), 1e-6,
+            Util.assertRectangleEquals(assert, rect1, viewport.getBounds(), 1e-6,
                 'Bounds should be ' + rect1);
 
             // Zoom and pan
             var rect2 = new OpenSeadragon.Rect(1, 1, 2e9, 2e9);
             viewport.fitBounds(rect2);
-            Util.assertRectangleEquals(rect2, viewport.getBounds(), 1e-6,
+            Util.assertRectangleEquals(assert, rect2, viewport.getBounds(), 1e-6,
                 'Bounds should be ' + rect2);
-            start();
+            done();
         };
         viewer.addOnceHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('fitHorizontally', function(){
+    QUnit.test('fitHorizontally', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
             viewport.fitHorizontally(true);
-            propEqual(
+            assert.propEqual(
                 viewport.getBounds(),
                 new OpenSeadragon.Rect(0, 1.5, 1, 1),
                 "Viewport fit a tall image horizontally."
             );
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(TALL_PATH);
     });
 
-    asyncTest('fitVertically', function(){
+    QUnit.test('fitVertically', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
             viewport.fitVertically(true);
-            propEqual(
+            assert.propEqual(
                 viewport.getBounds(),
                 new OpenSeadragon.Rect(0.375, 0, 0.25, 0.25),
                 "Viewport fit a wide image vertically."
             );
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(WIDE_PATH);
     });
     // End fitBounds tests.
 
-    asyncTest('panBy', function(){
+    QUnit.test('panBy', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -687,60 +782,110 @@
             for (var i = 0; i < testPoints.length; i++){
                 var expected = viewport.getCenter().plus(testPoints[i]);
                 viewport.panBy(testPoints[i], true);
-                propEqual(
+                assert.propEqual(
                     viewport.getCenter(),
                     expected,
                     "Panned by the correct amount."
                 );
             }
 
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('panTo', function(){
+    QUnit.test('panBy flipped', function(assert) {
+        var done = assert.async();
+        var openHandler = function(event) {
+            viewer.removeHandler('open', openHandler);
+            var viewport = viewer.viewport;
+
+            viewport.setFlip(true);
+
+            for (var i = 0; i < testPoints.length; i++){
+                var expected = viewport.getCenter().plus(testPoints[i]);
+                viewport.panBy(testPoints[i], true);
+                assert.propEqual(
+                    viewport.getCenter(),
+                    expected,
+                    "Panned flipped by the correct amount."
+                );
+            }
+
+            done();
+        };
+        viewer.addHandler('open', openHandler);
+        viewer.open(DZI_PATH);
+    });
+
+    QUnit.test('panTo', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
 
             for (var i = 0; i < testPoints.length; i++){
                 viewport.panTo(testPoints[i], true);
-                propEqual(
+                assert.propEqual(
                     viewport.getCenter(),
                     testPoints[i],
                     "Panned to the correct location."
                 );
             }
 
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('zoomBy no ref point', function() {
+    QUnit.test('panTo flipped', function(assert) {
+        var done = assert.async();
+        var openHandler = function(event) {
+            viewer.removeHandler('open', openHandler);
+            var viewport = viewer.viewport;
+
+            viewport.setFlip(true);
+
+            for (var i = 0; i < testPoints.length; i++){
+                viewport.panTo(testPoints[i], true);
+                assert.propEqual(
+                    viewport.getCenter(),
+                    testPoints[i],
+                    "Panned flipped to the correct location."
+                );
+            }
+
+            done();
+        };
+        viewer.addHandler('open', openHandler);
+        viewer.open(DZI_PATH);
+    });
+
+    QUnit.test('zoomBy no ref point', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
 
             for (var i = 0; i < testZoomLevels.length; i++) {
                 viewport.zoomBy(testZoomLevels[i], null, true);
-                propEqual(
+                assert.propEqual(
                     viewport.getZoom(),
                     testZoomLevels[i],
                     "Zoomed by the correct amount."
                 );
             }
 
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('zoomBy with ref point', function() {
+    QUnit.test('zoomBy with ref point', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -756,12 +901,13 @@
 
             for (var i = 0; i < testZoomLevels.length; i++) {
                 viewport.zoomBy(testZoomLevels[i], testPoints[i], true);
-                propEqual(
+                assert.propEqual(
                     viewport.getZoom(),
                     testZoomLevels[i],
                     "Zoomed by the correct amount."
                 );
                 assertPointsEquals(
+                    assert,
                     viewport.getCenter(),
                     expectedCenters[i],
                     1e-14,
@@ -769,33 +915,74 @@
                 );
             }
 
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('zoomTo no ref point', function() {
+    QUnit.test('zoomBy flipped with ref point', function(assert) {
+        var done = assert.async();
+        var openHandler = function(event) {
+            viewer.removeHandler('open', openHandler);
+            var viewport = viewer.viewport;
+
+            viewport.setFlip(true);
+
+            var expectedFlippedCenters = [
+                new OpenSeadragon.Point(5, 5),
+                new OpenSeadragon.Point(6.996, 6.996),
+                new OpenSeadragon.Point(7.246, 6.996),
+                new OpenSeadragon.Point(7.246, 6.996),
+                new OpenSeadragon.Point(7.621, 7.371),
+                new OpenSeadragon.Point(7.621, 7.371),
+            ];
+
+            for (var i = 0; i < testZoomLevels.length; i++) {
+                viewport.zoomBy(testZoomLevels[i], testPoints[i], true);
+                assert.propEqual(
+                    testZoomLevels[i],
+                    viewport.getZoom(),
+                    "Zoomed flipped by the correct amount."
+                );
+                assertPointsEquals(
+                    assert,
+                    expectedFlippedCenters[i],
+                    viewport.getCenter(),
+                    1e-6,
+                    "Panned flipped to the correct location."
+                );
+            }
+
+            done();
+        };
+        viewer.addHandler('open', openHandler);
+        viewer.open(DZI_PATH);
+    });
+
+    QUnit.test('zoomTo no ref point', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
 
             for (var i = 0; i < testZoomLevels.length; i++) {
                 viewport.zoomTo(testZoomLevels[i], null, true);
-                propEqual(
+                assert.propEqual(
                     viewport.getZoom(),
                     testZoomLevels[i],
                     "Zoomed to the correct level."
                 );
             }
 
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('zoomTo with ref point', function() {
+    QUnit.test('zoomTo with ref point', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -811,43 +998,107 @@
 
             for (var i = 0; i < testZoomLevels.length; i++) {
                 viewport.zoomTo(testZoomLevels[i], testPoints[i], true);
-                propEqual(
+                assert.propEqual(
                     viewport.getZoom(),
                     testZoomLevels[i],
                     "Zoomed to the correct level."
                 );
                 assertPointsEquals(
-                    viewport.getCenter(),
+                    assert,
                     expectedCenters[i],
+                    viewport.getCenter(),
                     1e-14,
                     "Panned to the correct location."
                 );
             }
 
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('rotation', function(){
+    QUnit.test('zoomTo flipped with ref point', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
 
-            propEqual(viewport.getRotation, 0, "Original rotation should be 0 degrees");
+            viewport.setFlip(true);
+
+            var expectedFlippedCenters = [
+                new OpenSeadragon.Point(5, 5),
+                new OpenSeadragon.Point(4.7505, 4.7505),
+                new OpenSeadragon.Point(4.6005, 4.7505),
+                new OpenSeadragon.Point(4.8455, 4.9955),
+                new OpenSeadragon.Point(5.2205, 5.3705),
+                new OpenSeadragon.Point(5.2205, 5.3705),
+            ];
+
+            for (var i = 0; i < testZoomLevels.length; i++) {
+                viewport.zoomTo(testZoomLevels[i], testPoints[i], true);
+                assert.propEqual(
+                    viewport.getZoom(),
+                    testZoomLevels[i],
+                    "Zoomed flipped to the correct level."
+                );
+                assertPointsEquals(
+                    assert,
+                    expectedFlippedCenters[i],
+                    viewport.getCenter(),
+                    1e-14,
+                    "Panned flipped to the correct location."
+                );
+            }
+
+            done();
+        };
+        viewer.addHandler('open', openHandler);
+        viewer.open(DZI_PATH);
+    });
+
+    QUnit.test('rotation', function(assert){
+        var done = assert.async();
+        var openHandler = function(event) {
+            viewer.removeHandler('open', openHandler);
+            var viewport = viewer.viewport;
+
+            assert.propEqual(viewport.getRotation, 0, "Original rotation should be 0 degrees");
             viewport.setRotation(90);
-            propEqual(viewport.getRotation, 90, "Rotation should be 90 degrees");
+            assert.propEqual(viewport.getRotation, 90, "Rotation should be 90 degrees");
             viewport.setRotation(-75);
-            propEqual(viewport.getRotation, -75, "Rotation should be -75 degrees");
-            start();
+            assert.propEqual(viewport.getRotation, -75, "Rotation should be -75 degrees");
+
+            done();
         };
 
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('resize', function() {
+    QUnit.test('rotation (flipped)', function(assert){
+        var done = assert.async();
+        var openHandler = function(event) {
+            viewer.removeHandler('open', openHandler);
+            var viewport = viewer.viewport;
+
+            viewport.setFlip(true);
+
+            assert.propEqual(viewport.getRotation, 0, "Original flipped rotation should be 0 degrees");
+            viewport.setRotation(90);
+            assert.propEqual(viewport.getRotation, 90, "Flipped rotation should be 90 degrees");
+            viewport.setRotation(-75);
+            assert.propEqual(viewport.getRotation, -75, "Flipped rotation should be -75 degrees");
+
+            done();
+        };
+
+        viewer.addHandler('open', openHandler);
+        viewer.open(DZI_PATH);
+    });
+
+    QUnit.test('resize', function(assert) {
+        var done = assert.async();
         var openHandler = function(event) {
             viewer.removeHandler('open', openHandler);
             var viewport = viewer.viewport;
@@ -855,16 +1106,16 @@
             for(var i = 0; i < testPoints.length; i++){
                 var new_size = testPoints[i].times(viewer.source.dimensions.x);
                 viewport.resize(new_size);
-                propEqual(viewport.getContainerSize(), new_size, "Viewport resized successfully.");
+                assert.propEqual(viewport.getContainerSize(), new_size, "Viewport resized successfully.");
             }
-            start();
+            done();
         };
         viewer.addHandler('open', openHandler);
         viewer.open(DZI_PATH);
     });
 
-    asyncTest('deltaPixelsFromPoints', function() {
-         loopingTestHelper({
+    QUnit.test('deltaPixelsFromPoints', function(assert) {
+         loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport){
                 return el.times(viewer.source.dimensions.x);
@@ -876,8 +1127,8 @@
         });
     });
 
-    asyncTest('deltaPointsFromPixels', function() {
-        loopingTestHelper({
+    QUnit.test('deltaPointsFromPixels', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 return el.times(viewport.getContainerSize().x);
@@ -889,8 +1140,8 @@
         });
     });
 
-    asyncTest('pixelFromPoint', function() {
-        loopingTestHelper({
+    QUnit.test('pixelFromPoint', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 return el.times(viewer.source.dimensions.x);
@@ -902,8 +1153,8 @@
         });
     });
 
-    asyncTest('pointFromPixel', function() {
-        loopingTestHelper({
+    QUnit.test('pointFromPixel', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 return el.times(viewport.getContainerSize().x);
@@ -915,8 +1166,8 @@
         });
     });
 
-    asyncTest('viewportToImageCoordinates', function() {
-        loopingTestHelper({
+    QUnit.test('viewportToImageCoordinates', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 return el.times(viewport.getContainerSize().x);
@@ -929,8 +1180,8 @@
         });
     });
 
-    asyncTest('imageToViewportCoordinates', function() {
-        loopingTestHelper({
+    QUnit.test('imageToViewportCoordinates', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 return el.times(viewer.source.dimensions.x);
@@ -942,8 +1193,8 @@
             assert: assertPointsEquals
         });
     });
-    asyncTest('imageToViewportRectangle', function() {
-        loopingTestHelper({
+    QUnit.test('imageToViewportRectangle', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testRects,
             getOrig: function(el, viewport) {
                 return el.times(viewer.source.dimensions.x);
@@ -961,8 +1212,8 @@
         });
     });
 
-    asyncTest('viewportToImageRectangle', function() {
-        loopingTestHelper({
+    QUnit.test('viewportToImageRectangle', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testRects,
             getOrig: function(el, viewport) {
                 return el.times(viewport.getContainerSize().x);
@@ -979,8 +1230,8 @@
         });
     });
 
-    asyncTest('viewerElementToImageCoordinates', function() {
-        loopingTestHelper({
+    QUnit.test('viewerElementToImageCoordinates', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 return el.times(viewport.getContainerSize().x);
@@ -992,8 +1243,8 @@
         });
     });
 
-    asyncTest('imageToViewerElementCoordinates', function() {
-        loopingTestHelper({
+    QUnit.test('imageToViewerElementCoordinates', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 return el.times(viewer.source.dimensions.x);
@@ -1005,8 +1256,8 @@
         });
     });
 
-   asyncTest('windowToImageCoordinates', function() {
-        loopingTestHelper({
+    QUnit.test('windowToImageCoordinates', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 var window_boundary = Math.min(window.innerWidth, window.innerHeight);
@@ -1020,8 +1271,8 @@
         });
     });
 
-    asyncTest('imageToWindowCoordinates', function() {
-        loopingTestHelper({
+    QUnit.test('imageToWindowCoordinates', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 return el.times(viewer.source.dimensions.x);
@@ -1034,8 +1285,8 @@
         });
     });
 
-    asyncTest('windowToViewportCoordinates', function() {
-        loopingTestHelper({
+    QUnit.test('windowToViewportCoordinates', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 var window_boundary = Math.min(window.innerWidth, window.innerHeight);
@@ -1049,8 +1300,8 @@
         });
     });
 
-    asyncTest('viewportToWindowCoordinates', function() {
-        loopingTestHelper({
+    QUnit.test('viewportToWindowCoordinates', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 return el.times(viewer.source.dimensions.x);
@@ -1063,8 +1314,8 @@
         });
     });
 
-    asyncTest('viewportToImageZoom', function() {
-        loopingTestHelper({
+    QUnit.test('viewportToImageZoom', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 return el;
@@ -1076,8 +1327,8 @@
         });
     });
 
-    asyncTest('imageToViewportZoom', function() {
-        loopingTestHelper({
+    QUnit.test('imageToViewportZoom', function(assert) {
+        loopingTestHelper(assert, {
             testArray: testPoints,
             getOrig: function(el, viewport) {
                 return el;
@@ -1087,6 +1338,46 @@
             },
             method: 'imageToViewportZoom'
         });
+    });
+
+    QUnit.test('toggleFlipState', function(assert) {
+      var done = assert.async();
+      var openHandler = function(event) {
+          viewer.removeHandler('open', openHandler);
+          var viewport = viewer.viewport;
+
+          assert.deepEqual(viewport.getFlip(), false, "Get original flip state should be false");
+
+          viewport.toggleFlip();
+          assert.deepEqual(viewport.getFlip(), true, "Toggling flip state variable, viewport should be true");
+
+          viewport.toggleFlip();
+          assert.deepEqual(viewport.getFlip(), false, "Toggling back flip state variable, viewport should be false again");
+
+          done();
+      };
+      viewer.addHandler('open', openHandler);
+      viewer.open(DZI_PATH);
+    });
+
+    QUnit.test('setFlipState', function(assert) {
+      var done = assert.async();
+      var openHandler = function(event) {
+          viewer.removeHandler('open', openHandler);
+          var viewport = viewer.viewport;
+
+          assert.deepEqual(viewport.getFlip(), false, "Get original flip state should be false");
+
+          viewport.setFlip(true);
+          assert.deepEqual(viewport.getFlip(), true, "Setting flip state variable should be true");
+
+          viewport.setFlip(false);
+          assert.deepEqual(viewport.getFlip(), false, "Unsetting flip state variable, viewport should be false again");
+
+          done();
+      };
+      viewer.addHandler('open', openHandler);
+      viewer.open(DZI_PATH);
     });
 
 })();
