@@ -152,7 +152,7 @@ $.Navigator = function( options ){
         style.border        = borderWidth + 'px solid ' + options.displayRegionColor;
         style.margin        = '0px';
         style.padding       = '0px';
-        //TODO: IE doesnt like this property being set
+        //TODO: IE doesn't like this property being set
         //try{ style.outline  = '2px auto #909'; }catch(e){/*ignore*/}
 
         style.background    = 'transparent';
@@ -182,16 +182,14 @@ $.Navigator = function( options ){
     this._resizeWithViewer = options.controlOptions.anchor != $.ControlAnchor.ABSOLUTE &&
         options.controlOptions.anchor != $.ControlAnchor.NONE;
 
-    if ( this._resizeWithViewer ) {
-        if ( options.width && options.height ) {
-            this.element.style.height = typeof (options.height) == "number" ? (options.height + 'px') : options.height;
-            this.element.style.width  = typeof (options.width) == "number" ? (options.width + 'px') : options.width;
-        } else {
-            viewerSize = $.getElementSize( viewer.element );
-            this.element.style.height = Math.round( viewerSize.y * options.sizeRatio ) + 'px';
-            this.element.style.width  = Math.round( viewerSize.x * options.sizeRatio ) + 'px';
-            this.oldViewerSize = viewerSize;
-        }
+    if (options.width && options.height) {
+        this.setWidth(options.width);
+        this.setHeight(options.height);
+    } else if ( this._resizeWithViewer ) {
+        viewerSize = $.getElementSize( viewer.element );
+        this.element.style.height = Math.round( viewerSize.y * options.sizeRatio ) + 'px';
+        this.element.style.width  = Math.round( viewerSize.x * options.sizeRatio ) + 'px';
+        this.oldViewerSize = viewerSize;
         navigatorSize = $.getElementSize( this.element );
         this.elementArea = navigatorSize.x * navigatorSize.y;
         //＠＠masaka変更1行追加↓。navigatorHeight、navigatorWidthを設定してもupdateでviewerの比率に戻されてしまうため
@@ -279,8 +277,29 @@ $.extend( $.Navigator.prototype, $.EventSource.prototype, $.Viewer.prototype, /*
             }
         }
     },
+
     /**
-      /* Flip navigator element
+     * Explicitly sets the width of the navigator, in web coordinates. Disables automatic resizing.
+     * @param {Number|String} width - the new width, either a number of pixels or a CSS string, such as "100%"
+     */
+    setWidth: function(width) {
+        this.width = width;
+        this.element.style.width = typeof (width) == "number" ? (width + 'px') : width;
+        this._resizeWithViewer = false;
+    },
+
+    /**
+     * Explicitly sets the height of the navigator, in web coordinates. Disables automatic resizing.
+     * @param {Number|String} height - the new height, either a number of pixels or a CSS string, such as "100%"
+     */
+    setHeight: function(height) {
+        this.height = height;
+        this.element.style.height = typeof (height) == "number" ? (height + 'px') : height;
+        this._resizeWithViewer = false;
+    },
+
+    /**
+      * Flip navigator element
       * @param {Boolean} state - Flip state to set.
       */
     setFlip: function(state) {
@@ -574,7 +593,7 @@ function onCanvasScroll( event ) {
         originalEvent: event.originalEvent
     });
 
-    //dont scroll the page up and down if the user is scrolling
+    //don't scroll the page up and down if the user is scrolling
     //in the navigator
     return false;
 }

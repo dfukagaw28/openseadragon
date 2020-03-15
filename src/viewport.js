@@ -57,7 +57,7 @@
  */
 $.Viewport = function( options ) {
 
-    //backward compatibility for positional args while prefering more
+    //backward compatibility for positional args while preferring more
     //idiomatic javascript options object as the only argument
     var args = arguments;
     if (args.length && args[0] instanceof $.Point) {
@@ -875,6 +875,7 @@ $.Viewport.prototype = {
     /**
      * Rotates this viewport to the angle specified.
      * @function
+     * @param {Number} degrees The degrees to set the rotation to.
      * @return {OpenSeadragon.Viewport} Chainable.
      */
     setRotation: function(degrees) {
@@ -1531,7 +1532,7 @@ $.Viewport.prototype = {
     },
 
     /**
-     * Gets flip state stored on viewport.
+     * Get flip state stored on viewport.
      * @function
      * @return {Boolean} Flip state.
      */

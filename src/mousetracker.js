@@ -2499,7 +2499,7 @@
 
         // If isPrimary is not known for the pointer then set it according to our rules:
         //    true if the first pointer in the gesture, otherwise false
-        if ( !gPoint.hasOwnProperty( 'isPrimary' ) ) {
+        if ( !Object.prototype.hasOwnProperty.call( gPoint, 'isPrimary' ) ) {
             if ( pointsList.getLength() === 0 ) {
                 gPoint.isPrimary = true;
             } else {
@@ -2535,7 +2535,7 @@
             listLength = pointsList.removeById( gPoint.id );
 
             // If isPrimary is not known for the pointer and we just removed the primary pointer from the list then we need to set another pointer as primary
-            if ( !gPoint.hasOwnProperty( 'isPrimary' ) ) {
+            if ( !Object.prototype.hasOwnProperty.call( gPoint, 'isPrimary' ) ) {
                 primaryPoint = pointsList.getPrimary();
                 if ( !primaryPoint ) {
                     primaryPoint = pointsList.getByIndex( 0 );
@@ -2661,7 +2661,7 @@
                     {
                         eventSource:          tracker,
                         pointerType:          curGPoint.type,
-                        position:             getPointRelativeToAbsolute( curGPoint.currentPos, tracker.element ),
+                        position:             curGPoint.currentPos && getPointRelativeToAbsolute( curGPoint.currentPos, tracker.element ),
                         buttons:              pointsList.buttons,
                         pointers:             tracker.getActivePointerCount(),
                         insideElementPressed: updateGPoint ? updateGPoint.insideElementPressed : false,
@@ -2958,10 +2958,16 @@
             return false;
         }
 
+        // OS-specific gestures (e.g. swipe up with four fingers in iPadOS 13)
+        if (typeof gPoints[ 0 ].currentPos === "undefined") {
+            abortContacts(tracker, event, pointsList);
+
+            return false;
+        }
+
         for ( i = 0; i < gPointCount; i++ ) {
             curGPoint = gPoints[ i ];
             updateGPoint = pointsList.getById( curGPoint.id );
-
             if ( updateGPoint ) {
                 // Update the pointer, stop tracking it if not still in this element
                 if ( updateGPoint.captured ) {
@@ -3166,7 +3172,7 @@
 
             if ( updateGPoint ) {
                 // Already tracking the pointer...update it
-                if ( curGPoint.hasOwnProperty( 'isPrimary' ) ) {
+                if ( Object.prototype.hasOwnProperty.call( curGPoint, 'isPrimary' ) ) {
                     updateGPoint.isPrimary = curGPoint.isPrimary;
                 }
                 updateGPoint.lastPos = updateGPoint.currentPos;
